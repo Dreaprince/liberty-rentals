@@ -267,21 +267,52 @@ class BookController extends Controller
     /**
      * Delete a book (Admin only)
      * 
+     * Permanently deletes a specific book from the library system.
+     * Only accessible to users with the 'admin' role.
+     * 
      * @authenticated
-     * @urlParam book int required ID of the book to delete.
+     * 
+     * @urlParam book int required The ID of the book to delete. Example: 5
      * 
      * @response 200 {
-     *   "message": "Book deleted"
+     *   "success": true,
+     *   "message": "Book deleted successfully"
+     * }
+     * 
+     * @response 403 {
+     *   "success": false,
+     *   "message": "You are not authorized to perform this action"
+     * }
+     * 
+     * @response 404 {
+     *   "success": false,
+     *   "message": "Book not found"
      * }
      */
-    public function destroy(Book $book)
+    public function destroy($id)
     {
         if (!auth()->user()->isAdmin()) {
-            return response()->json(['message' => 'Only admins allowed'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to perform this action',
+            ], 403);
+        }
+
+        $book = Book::find($id);
+
+        if (!$book) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Book not found',
+            ], 404);
         }
 
         $book->delete();
 
-        return response()->json(['message' => 'Book deleted'], 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Book deleted successfully',
+        ], 200);
     }
+
 }
