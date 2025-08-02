@@ -6,131 +6,129 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
     /**
      * Register a new user
      *
-     * Registers a new user account and returns the user details.
-     *
-     * @bodyParam name string required The user's name. Example: John Doe
-     * @bodyParam email string required A valid email address. Example: john@example.com
-     * @bodyParam password string required Minimum 6 characters. Example: password123
-     * @bodyParam role string Optional. Allowed values: "admin", "user". Default is "user".
+     * @bodyParam name string required Name of the user.
+     * @bodyParam email string required Valid email address.
+     * @bodyParam password string required Minimum of 6 characters.
+     * @bodyParam role string Optional. Must be 'admin' or 'user'. Defaults to 'user'.
      *
      * @response 201 {
+     *   "status": "success",
      *   "message": "User registered successfully",
-     *   "user": {
-     *     "id": 1,
-     *     "name": "John Doe",
-     *     "email": "john@example.com",
-     *     "role": "user",
-     *     "created_at": "2025-08-02T12:00:00.000000Z",
-     *     "updated_at": "2025-08-02T12:00:00.000000Z"
+     *   "data": {
+     *     "user": {
+     *       "id": 1,
+     *       "name": "John Doe",
+     *       "email": "john@example.com",
+     *       "role": "user",
+     *       ...
+     *     }
      *   }
      * }
      */
     public function register(Request $request)
     {
-        // Step 1: Validate input
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'role' => 'in:user,admin'
+            'role' => 'in:user,admin',
         ]);
 
-        // Step 2: Check if user already exists
-        if (User::where('email', $validated['email'])->exists()) {
+        if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'A user with this email already exists.',
-            ], 409); // 409 Conflict
+                'message' => $validator->errors()->first(),
+            ], 422);
         }
 
-        // Step 3: Create user
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
-            'role' => $validated['role'] ?? 'user',
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role ?? 'user',
         ]);
 
-        // Step 4: Return formatted response
         return response()->json([
             'status' => 'success',
             'message' => 'User registered successfully',
-            'data' => [
-                'user' => $user
-            ]
+            'data' => ['user' => $user],
         ], 201);
     }
 
-
     /**
-     * Log in an existing user
+     * Log in a user using Sanctum
      *
-     * Returns a token and user details if credentials are correct.
-     *
-     * @bodyParam email string required The user's email. Example: john@example.com
-     * @bodyParam password string required The user's password. Example: password123
+     * @bodyParam email string required The user's email.
+     * @bodyParam password string required The user's password.
      *
      * @response 200 {
-     *   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci...",
-     *   "token_type": "Bearer",
-     *   "user": {
-     *     "id": 1,
-     *     "name": "John Doe",
-     *     "email": "john@example.com",
-     *     "role": "user",
-     *     "created_at": "2025-08-02T12:00:00.000000Z",
-     *     "updated_at": "2025-08-02T12:00:00.000000Z"
+     *   "status": "success",
+     *   "message": "Login successful",
+     *   "data": {
+     *     "access_token": "token_here",
+     *     "token_type": "Bearer",
+     *     "user": { ... }
      *   }
      * }
      *
      * @response 401 {
-     *   "message": "Invalid credentials"
+     *   "status": "error",
+     *   "message": "Incorrect username or password"
      * }
      */
-     public function login(Request $request)
+    public function login(Request $request)
     {
-        // Step 1: Validate input
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        // Step 2: Check if user exists
-        $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
+        if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Incorrect Username/Password',
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Incorrect username or password',
             ], 401);
         }
 
-        // Step 3: Verify password
-        if (!Hash::check($validated['password'], $user->password)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Incorrect Username/Password',
-            ], 401);
-        }
-
-        // Step 4: Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Step 5: Return successful response
         return response()->json([
             'status' => 'success',
             'message' => 'Login successful',
             'data' => [
                 'access_token' => $token,
                 'token_type' => 'Bearer',
-                'user' => $user
+                'user' => $user,
             ]
-        ], 200);
+        ]);
     }
 
+    /**
+     * Logout (revoke current token)
+     */
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User logged out successfully'
+        ]);
+    }
 }
