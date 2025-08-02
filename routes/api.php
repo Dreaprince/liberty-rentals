@@ -13,19 +13,21 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-      // Public for all authenticated users
-    Route::get('/books', [BookController::class, 'index']);
-    Route::get('/books/{book}', [BookController::class, 'show']);
+  // Public for all authenticated users
+  Route::get('/books', [BookController::class, 'index']);
+  Route::get('/books/{id}', [BookController::class, 'show']);
 
-    // Admin-only actions
-    Route::post('/books', [BookController::class, 'store']);
-    Route::put('/books/{book}', [BookController::class, 'update']);
-    Route::delete('/books/{book}', [BookController::class, 'destroy']);
-    
 
-    Route::post('/rentals', [RentalController::class, 'rent']);
-    Route::post('/rentals/{id}/return', [RentalController::class, 'returnBook']);
-    Route::get('/my-rentals', [RentalController::class, 'myRentals']);
+  // Admin-only actions
+  Route::post('/books', [BookController::class, 'store']);
+  Route::put('/books/{id}', [BookController::class, 'update']);
+  Route::delete('/books/{id}', [BookController::class, 'destroy']);
+
+
+
+  Route::post('/rentals', [RentalController::class, 'rent']);
+  Route::post('/rentals/{id}/return', [RentalController::class, 'returnBook']);
+  Route::get('/my-rentals', [RentalController::class, 'myRentals']);
 });
 
 
