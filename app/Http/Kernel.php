@@ -8,10 +8,8 @@ class Kernel extends HttpKernel
 {
     /**
      * Global HTTP middleware stack.
-     * These middleware are run during every request to your application.
      */
     protected $middleware = [
-        \Illuminate\Http\Middleware\HandleCors::class, // ✅ Proper CORS middleware
         \App\Http\Middleware\TrustProxies::class,
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
@@ -20,7 +18,7 @@ class Kernel extends HttpKernel
     ];
 
     /**
-     * The application's route middleware groups.
+     * Route middleware groups.
      */
     protected $middlewareGroups = [
         'web' => [
@@ -33,13 +31,14 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \Illuminate\Http\Middleware\HandleCors::class, // ✅ Correct placement
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
     /**
-     * The application's route middleware.
+     * Route middleware.
      */
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
@@ -51,5 +50,7 @@ class Kernel extends HttpKernel
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+
+        'expire.sanctum.token' => \App\Http\Middleware\ExpireSanctumTokens::class,
     ];
 }

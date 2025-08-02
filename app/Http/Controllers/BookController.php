@@ -43,22 +43,31 @@ class BookController extends Controller
 
     public function index()
     {
-        $books = Book::all();
+        try {
+            $books = Book::all();
 
-        if ($books->isEmpty()) {
+            if ($books->isEmpty()) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No books found',
+                    'data' => []
+                ], 200);
+            }
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'No books found',
-                'data' => []
+                'message' => 'Books retrieved successfully',
+                'data' => $books
             ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to retrieve books',
+                'error' => $e->getMessage(), // helpful for debugging in development
+            ], 500);
         }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Books retrieved successfully',
-            'data' => $books
-        ], 200);
     }
+
 
     /**
      * Show details for a specific book

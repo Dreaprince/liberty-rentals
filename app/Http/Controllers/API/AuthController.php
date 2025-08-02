@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 
 class AuthController extends Controller
 {
@@ -106,14 +107,20 @@ class AuthController extends Controller
             ], 401);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $tokenResult = $user->createToken('auth_token');
+        $token = $tokenResult->plainTextToken;
+
+        // Set expiry (24 hours from now)
+        $tokenResult->accessToken->expires_at = now()->addHours(24);
+        $tokenResult->accessToken->save();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Login successful',
             'data' => [
                 'access_token' => $token,
-                'token_type' => 'Bearer',
+                //'token_type' => 'Bearer',
+                'expires_at' => $tokenResult->accessToken->expires_at,
                 'user' => $user,
             ]
         ]);
