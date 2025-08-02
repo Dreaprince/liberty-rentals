@@ -17,6 +17,7 @@ class RentalController extends Controller
      * @bodyParam book_id int required The ID of the book to rent.
      * 
      * @response 201 {
+     *   "status": "success",
      *   "message": "Book rented successfully",
      *   "rental": {
      *     "id": 5,
@@ -29,27 +30,41 @@ class RentalController extends Controller
      */
     public function rent(Request $request)
     {
-        $data = $request->validate([
+        $validated = $request->validate([
             'book_id' => 'required|exists:books,id',
         ]);
 
-        $book = Book::findOrFail($data['book_id']);
+        $user = Auth::user();
+        $book = Book::find($validated['book_id']);
 
-        if ($book->available_copies < 1) {
-            return response()->json(['message' => 'Book is not currently available for rent.'], 400);
+        if (! $book) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Book not found.'
+            ], 404);
         }
 
-        $alreadyRented = Rental::where('user_id', Auth::id())
+        if ($book->available_copies < 1) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This book is currently out of stock.'
+            ], 400);
+        }
+
+        $alreadyRented = Rental::where('user_id', $user->id)
             ->where('book_id', $book->id)
             ->whereNull('returned_at')
             ->exists();
 
         if ($alreadyRented) {
-            return response()->json(['message' => 'You have already rented this book and not yet returned it.'], 409);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You already have this book rented. Please return it before renting again.'
+            ], 409);
         }
 
         $rental = Rental::create([
-            'user_id' => Auth::id(),
+            'user_id' => $user->id,
             'book_id' => $book->id,
             'rented_at' => now(),
         ]);
@@ -57,10 +72,12 @@ class RentalController extends Controller
         $book->decrement('available_copies');
 
         return response()->json([
-            'message' => 'Book rented successfully',
+            'status' => 'success',
+            'message' => 'Book rented successfully.',
             'rental' => $rental
         ], 201);
     }
+
 
     /**
      * Return a rented book.
