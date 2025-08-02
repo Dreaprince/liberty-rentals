@@ -87,7 +87,13 @@ class RentalController extends Controller
      * @urlParam id int required The ID of the rental to return.
      * 
      * @response 200 {
+     *   "status": "success",
      *   "message": "Book returned successfully"
+     * }
+     * 
+     * @response 404 {
+     *   "status": "error",
+     *   "message": "No active rental found for this book."
      * }
      */
     public function returnBook($id)
@@ -98,13 +104,19 @@ class RentalController extends Controller
             ->first();
 
         if (! $rental) {
-            return response()->json(['message' => 'No active rental found.'], 404);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No active rental found for this book.'
+            ], 404);
         }
 
         $rental->update(['returned_at' => now()]);
         $rental->book->increment('available_copies');
 
-        return response()->json(['message' => 'Book returned successfully'], 200);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Book returned successfully.'
+        ], 200);
     }
 
     /**
@@ -112,24 +124,35 @@ class RentalController extends Controller
      * 
      * @authenticated
      * 
-     * @response 200 [
-     *   {
-     *     "id": 1,
-     *     "book": {
-     *       "id": 2,
-     *       "title": "Book Title"
-     *     },
-     *     "rented_at": "2025-08-02T13:00:00Z",
-     *     "returned_at": null
-     *   }
-     * ]
+     * @response 200 {
+     *   "status": "success",
+     *   "message": "Rental history retrieved successfully.",
+     *   "data": [
+     *     {
+     *       "id": 1,
+     *       "book": {
+     *         "id": 2,
+     *         "title": "Book Title"
+     *       },
+     *       "rented_at": "2025-08-02T13:00:00Z",
+     *       "returned_at": null
+     *     }
+     *   ]
+     * }
      */
     public function myRentals()
     {
-        return Auth::user()
+        $rentals = Auth::user()
             ->rentals()
             ->with('book:id,title')
             ->latest()
             ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Rental history retrieved successfully.',
+            'data' => $rentals
+        ], 200);
     }
+
 }
