@@ -33,25 +33,40 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $fields = $request->validate([
-            'name' => 'required|string',
-            'email' => 'required|email|unique:users,email',
+        // Step 1: Validate input
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
             'password' => 'required|string|min:6',
             'role' => 'in:user,admin'
         ]);
 
+        // Step 2: Check if user already exists
+        if (User::where('email', $validated['email'])->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'A user with this email already exists.',
+            ], 409); // 409 Conflict
+        }
+
+        // Step 3: Create user
         $user = User::create([
-            'name' => $fields['name'],
-            'email' => $fields['email'],
-            'password' => bcrypt($fields['password']),
-            'role' => $fields['role'] ?? 'user',
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role' => $validated['role'] ?? 'user',
         ]);
 
+        // Step 4: Return formatted response
         return response()->json([
+            'status' => 'success',
             'message' => 'User registered successfully',
-            'user' => $user
+            'data' => [
+                'user' => $user
+            ]
         ], 201);
     }
+
 
     /**
      * Log in an existing user
@@ -78,25 +93,44 @@ class AuthController extends Controller
      *   "message": "Invalid credentials"
      * }
      */
-    public function login(Request $request)
+     public function login(Request $request)
     {
-        $fields = $request->validate([
+        // Step 1: Validate input
+        $validated = $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $fields['email'])->first();
-
-        if (! $user || ! Hash::check($fields['password'], $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        // Step 2: Check if user exists
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Incorrect Username/Password',
+            ], 401);
         }
 
+        // Step 3: Verify password
+        if (!Hash::check($validated['password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Incorrect Username/Password',
+            ], 401);
+        }
+
+        // Step 4: Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Step 5: Return successful response
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user
-        ]);
+            'status' => 'success',
+            'message' => 'Login successful',
+            'data' => [
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user
+            ]
+        ], 200);
     }
+
 }
