@@ -7,39 +7,43 @@ return [
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
     |
-    | Learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    | For more details: https://laravel.com/docs/12.x/routing#cors
     |
     */
 
-    // This determines which endpoints allow CORS
-    'paths' => ['api/*', 'docs/*', 'sanctum/csrf-cookie'],
-
-    // Allowed HTTP methods
-    'allowed_methods' => ['*'],
-
-    // Allowed origins (Frontend domains)
-    // 'allowed_origins' => ['*'], // Change to ['http://localhost:3000'] or your frontend domain in production
-    //'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:8000', '*'],
-    'allowed_origins' => [
-        '*', // allow all for development, including Postman Desktop
-        'http://localhost:3000', // local frontend
-        'http://127.0.0.1:3000', // alternative localhost
-        'https://web.postman.co' // Postman Web (if needed)
+    // Apply CORS to these paths
+    'paths' => [
+        'api/*',
+        'sanctum/csrf-cookie',
+        'login',
+        'logout',
+        'register',
+        'user',
     ],
 
+    // HTTP methods allowed
+    'allowed_methods' => ['*'],
 
-    // If you need wildcard origin support
+    // Only allow from these origins (no '*' if using credentials)
+    'allowed_origins' => [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:8000',
+        'https://web.postman.co', // Optional: Postman Web
+    ],
+
+    // Wildcard pattern origins (not used here)
     'allowed_origins_patterns' => [],
 
-    // Headers your frontend is allowed to send
+    // Allowed request headers from frontend
     'allowed_headers' => ['*'],
 
-    // Headers that will be exposed to the frontend
+    // Headers exposed back to the frontend
     'exposed_headers' => [],
 
-    // Time in seconds that the browser can cache the preflight response
+    // Cache the preflight response for this many seconds
     'max_age' => 0,
 
-    // Whether cookies are supported (only allow true if using credentials)
-    'supports_credentials' => false,
+    // Allow cookies/auth credentials
+    'supports_credentials' => true,
 ];
