@@ -20,7 +20,7 @@ A Laravel RESTful API for an online Book Rental service. It supports user authen
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/yourusername/liberty-rentals.git
+git clone https://github.com/Dreaprince/liberty-rentals.git
 cd liberty-rentals
 composer install
 ```
