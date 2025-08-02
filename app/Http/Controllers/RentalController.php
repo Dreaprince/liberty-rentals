@@ -10,26 +10,33 @@ use Illuminate\Support\Facades\Auth;
 class RentalController extends Controller
 {
     /**
-     * Rent a book if available
+     * Rent a book if available.
      *
      * @authenticated
      * 
      * @bodyParam book_id int required The ID of the book to rent.
      * 
-     * @response 200 {
-     *   "message": "Book rented successfully"
+     * @response 201 {
+     *   "message": "Book rented successfully",
+     *   "rental": {
+     *     "id": 5,
+     *     "user_id": 1,
+     *     "book_id": 2,
+     *     "rented_at": "2025-08-02T13:00:00Z",
+     *     "returned_at": null
+     *   }
      * }
      */
     public function rent(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'book_id' => 'required|exists:books,id',
         ]);
 
-        $book = Book::findOrFail($request->book_id);
+        $book = Book::findOrFail($data['book_id']);
 
         if ($book->available_copies < 1) {
-            return response()->json(['message' => 'Book not available'], 400);
+            return response()->json(['message' => 'Book is not currently available for rent.'], 400);
         }
 
         $alreadyRented = Rental::where('user_id', Auth::id())
@@ -38,25 +45,29 @@ class RentalController extends Controller
             ->exists();
 
         if ($alreadyRented) {
-            return response()->json(['message' => 'You already rented this book'], 400);
+            return response()->json(['message' => 'You have already rented this book and not yet returned it.'], 409);
         }
 
-        Rental::create([
+        $rental = Rental::create([
             'user_id' => Auth::id(),
             'book_id' => $book->id,
+            'rented_at' => now(),
         ]);
 
         $book->decrement('available_copies');
 
-        return response()->json(['message' => 'Book rented successfully']);
+        return response()->json([
+            'message' => 'Book rented successfully',
+            'rental' => $rental
+        ], 201);
     }
 
     /**
-     * Return a rented book
+     * Return a rented book.
      * 
      * @authenticated
      * 
-     * @urlParam id int required The ID of the rental.
+     * @urlParam id int required The ID of the rental to return.
      * 
      * @response 200 {
      *   "message": "Book returned successfully"
@@ -70,24 +81,27 @@ class RentalController extends Controller
             ->first();
 
         if (! $rental) {
-            return response()->json(['message' => 'No active rental found'], 404);
+            return response()->json(['message' => 'No active rental found.'], 404);
         }
 
         $rental->update(['returned_at' => now()]);
         $rental->book->increment('available_copies');
 
-        return response()->json(['message' => 'Book returned successfully']);
+        return response()->json(['message' => 'Book returned successfully'], 200);
     }
 
     /**
-     * View all my rentals
+     * View all my rentals.
      * 
      * @authenticated
      * 
      * @response 200 [
      *   {
      *     "id": 1,
-     *     "book_id": 2,
+     *     "book": {
+     *       "id": 2,
+     *       "title": "Book Title"
+     *     },
      *     "rented_at": "2025-08-02T13:00:00Z",
      *     "returned_at": null
      *   }
@@ -95,6 +109,10 @@ class RentalController extends Controller
      */
     public function myRentals()
     {
-        return Auth::user()->rentals()->with('book')->get();
+        return Auth::user()
+            ->rentals()
+            ->with('book:id,title')
+            ->latest()
+            ->get();
     }
 }

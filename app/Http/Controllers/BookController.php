@@ -29,14 +29,13 @@ class BookController extends Controller
      */
     public function index()
     {
-        return Book::all();
+        return response()->json(Book::all(), 200);
     }
 
     /**
      * Show details for a specific book
      * 
      * @authenticated
-     * 
      * @urlParam book int required The ID of the book.
      * 
      * @response 200 {
@@ -51,7 +50,7 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
-        return $book;
+        return response()->json($book, 200);
     }
 
     /**
@@ -74,14 +73,14 @@ class BookController extends Controller
      */
     public function store(Request $request)
     {
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Admins only'], 403);
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Only admins allowed'], 403);
         }
 
         $data = $request->validate([
-            'title' => 'required|string',
-            'author' => 'required|string',
-            'genre' => 'required|string',
+            'title' => 'required|string|max:255',
+            'author' => 'required|string|max:255',
+            'genre' => 'required|string|max:100',
             'published_year' => 'required|digits:4|integer',
             'total_copies' => 'required|integer|min:1',
             'available_copies' => 'required|integer|min:0',
@@ -97,25 +96,37 @@ class BookController extends Controller
      * 
      * @authenticated
      * @urlParam book int required ID of the book to update.
-     * 
      * @bodyParam title string The updated title.
      * @bodyParam author string The updated author.
      * @bodyParam genre string The updated genre.
      * @bodyParam published_year integer Format: YYYY
      * @bodyParam total_copies integer Minimum: 1
      * @bodyParam available_copies integer >= 0
+     * 
+     * @response 200 {
+     *   "id": 1,
+     *   "title": "Updated Title",
+     *   ...
+     * }
      */
     public function update(Request $request, Book $book)
     {
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Admins only'], 403);
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Only admins allowed'], 403);
         }
 
-        $book->update($request->only([
-            'title', 'author', 'genre', 'published_year', 'total_copies', 'available_copies'
-        ]));
+        $data = $request->validate([
+            'title' => 'string|max:255',
+            'author' => 'string|max:255',
+            'genre' => 'string|max:100',
+            'published_year' => 'digits:4|integer',
+            'total_copies' => 'integer|min:1',
+            'available_copies' => 'integer|min:0',
+        ]);
 
-        return response()->json($book);
+        $book->update($data);
+
+        return response()->json($book, 200);
     }
 
     /**
@@ -130,12 +141,12 @@ class BookController extends Controller
      */
     public function destroy(Book $book)
     {
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Forbidden - Admins only'], 403);
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Only admins allowed'], 403);
         }
 
         $book->delete();
 
-        return response()->json(['message' => 'Book deleted']);
+        return response()->json(['message' => 'Book deleted'], 200);
     }
 }

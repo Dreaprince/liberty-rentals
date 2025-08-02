@@ -11,19 +11,23 @@ class AuthController extends Controller
 {
     /**
      * Register a new user
-     * 
-     * @bodyParam name string required The user's name.
-     * @bodyParam email string required Must be a valid email.
-     * @bodyParam password string required Minimum 6 characters.
-     * @bodyParam role string Optional: 'admin' or 'user'. Default is 'user'.
-     * 
+     *
+     * Registers a new user account and returns the user details.
+     *
+     * @bodyParam name string required The user's name. Example: John Doe
+     * @bodyParam email string required A valid email address. Example: john@example.com
+     * @bodyParam password string required Minimum 6 characters. Example: password123
+     * @bodyParam role string Optional. Allowed values: "admin", "user". Default is "user".
+     *
      * @response 201 {
      *   "message": "User registered successfully",
      *   "user": {
      *     "id": 1,
      *     "name": "John Doe",
      *     "email": "john@example.com",
-     *     "role": "user"
+     *     "role": "user",
+     *     "created_at": "2025-08-02T12:00:00.000000Z",
+     *     "updated_at": "2025-08-02T12:00:00.000000Z"
      *   }
      * }
      */
@@ -33,14 +37,14 @@ class AuthController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
-            'role' => 'in:user,admin' // Optional: if provided, must be 'user' or 'admin'
+            'role' => 'in:user,admin'
         ]);
 
         $user = User::create([
             'name' => $fields['name'],
             'email' => $fields['email'],
             'password' => bcrypt($fields['password']),
-            'role' => $fields['role'] ?? 'user', // default to 'user' if not specified
+            'role' => $fields['role'] ?? 'user',
         ]);
 
         return response()->json([
@@ -52,13 +56,26 @@ class AuthController extends Controller
     /**
      * Log in an existing user
      *
-     * @bodyParam email string required The user's email.
-     * @bodyParam password string required The user's password.
-     * 
+     * Returns a token and user details if credentials are correct.
+     *
+     * @bodyParam email string required The user's email. Example: john@example.com
+     * @bodyParam password string required The user's password. Example: password123
+     *
      * @response 200 {
      *   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGci...",
      *   "token_type": "Bearer",
-     *   "user": { "id": 1, "name": "John", "email": "john@example.com" }
+     *   "user": {
+     *     "id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "role": "user",
+     *     "created_at": "2025-08-02T12:00:00.000000Z",
+     *     "updated_at": "2025-08-02T12:00:00.000000Z"
+     *   }
+     * }
+     *
+     * @response 401 {
+     *   "message": "Invalid credentials"
      * }
      */
     public function login(Request $request)
@@ -70,7 +87,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $fields['email'])->first();
 
-        if (!$user || !Hash::check($fields['password'], $user->password)) {
+        if (! $user || ! Hash::check($fields['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
@@ -83,5 +100,3 @@ class AuthController extends Controller
         ]);
     }
 }
-
-

@@ -17,4 +17,20 @@ class Book extends Model
         'total_copies',
         'available_copies',
     ];
+
+    /**
+     * Get all rentals for this book.
+     */
+    public function rentals()
+    {
+        return $this->hasMany(Rental::class);
+    }
+
+    /**
+     * Check if the book is available for rent.
+     */
+    public function isAvailable(): bool
+    {
+        return $this->available_copies > 0;
+    }
 }
