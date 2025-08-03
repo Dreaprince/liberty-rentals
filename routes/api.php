@@ -18,7 +18,7 @@ Route::post('/login', [AuthController::class, 'login']);
 | Protected Routes (Authenticated + Token Expiry)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth:sanctum', 'expire.sanctum.token'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
     // Books
     Route::get('/books', [BookController::class, 'index']);
     Route::get('/books/{id}', [BookController::class, 'show']);

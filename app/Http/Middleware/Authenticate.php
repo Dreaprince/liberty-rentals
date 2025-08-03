@@ -3,28 +3,18 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
-use Illuminate\Http\JsonResponse;
 
 class Authenticate extends Middleware
 {
-    /**
-     * Handle unauthenticated requests.
-     */
-    protected function unauthenticated($request, array $guards)
+    protected function redirectTo($request): ?string
     {
-        abort(response()->json([
-            'status' => 'error',
-            'message' => 'Authentication token is missing or invalid.',
-        ], 401));
-    }
+        // For API: send JSON response instead of redirecting to 'login' route
+        if (!$request->expectsJson()) {
+            abort(response()->json([
+                'message' => 'Unauthenticated. No token provided or token is invalid.'
+            ], 401));
+        }
 
-    /**
-     * Override redirectTo() for web fallback (optional).
-     */
-    protected function redirectTo($request)
-    {
-        // Only used in web routes. Not necessary for API.
         return null;
     }
 }
-
