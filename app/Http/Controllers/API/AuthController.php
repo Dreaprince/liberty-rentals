@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Carbon;
+use Laravel\Sanctum\NewAccessToken;
 
 class AuthController extends Controller
 {
@@ -107,20 +108,21 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Create token with expiration
+        /** @var NewAccessToken $tokenResult */
         $tokenResult = $user->createToken('auth_token');
-        $token = $tokenResult->plainTextToken;
+        $accessToken = $tokenResult->accessToken;
 
-        // Set expiry (24 hours from now)
-        $tokenResult->accessToken->expires_at = now()->addHours(24);
-        $tokenResult->accessToken->save();
+        // Set expiry (e.g., 24 hours)
+        $accessToken->expires_at = now()->addHours(24);
+        $accessToken->save();
 
         return response()->json([
             'status' => 'success',
             'message' => 'Login successful',
             'data' => [
-                'access_token' => $token,
-                //'token_type' => 'Bearer',
-                'expires_at' => $tokenResult->accessToken->expires_at,
+                'access_token' => $tokenResult->plainTextToken,
+                'expires_at' => $accessToken->expires_at,
                 'user' => $user,
             ]
         ]);
